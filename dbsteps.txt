@@ -138,7 +138,7 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // MongoDB Atlas Connection
-const mongoUri = 'mongodb+srv://sssujitha:sssujitha@studentcluster.m5qvy.mongodb.net/studentsDB?retryWrites=true&w=majority&appName=StudentCluster';
+const mongoUri = 'mongodb+srv://usernname:password@studentcluster.m5qvy.mongodb.net/YOUR DB NAMe?retryWrites=true&w=majority&appName=StudentCluster';
 
 mongoose
   .connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
