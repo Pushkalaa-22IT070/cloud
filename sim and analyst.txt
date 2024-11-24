@@ -1,0 +1,13 @@
+CLOUD SIM:
+
+1)In Eclipse go to file->new->project->java project
+2)Project name give unique name
+3)for location select the cloudsim-5.0 path and click finish
+4)Right click project->properties->java build path->libraries->add external jarz->add the 6 comman math files->applyy and close.
+5)explore the working of programs
+
+CLOUD ANALYST:
+
+1)open netbeans->file->open project and select cloud analyst folder.
+2)project created
+3)run
