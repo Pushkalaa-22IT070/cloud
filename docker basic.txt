@@ -1,0 +1,52 @@
+sudo apt-get install docker
+go to Google in linux -> docker hub
+click the first link - sign up(emailid - password)
+Then in the cmd prompt : docker login
+
+
+docker --version
+sudo apt-get install docker
+create a dir:
+	mkdir dock
+change dir:
+	cd dock
+create vol:
+	docker volume create
+To show vol:
+	docker volume ls
+To del vol:
+	docker volume rm <vol-id>
+To show network:
+	docker network ls
+Images:
+To dwld image:
+	docker pull ubuntu
+To show images:
+	docker images
+Creating container for the image:
+	docker run -it  ubuntu bash (or) docker run -it -d ubuntu 
+To list the containers:
+	docker ps -a
+To run the container:
+	docker exec -it <container-id> bash
+To stop the container from running:
+	exit
+	docker stop <container-id>
+To del the container:
+	docker rm <container-id>
+To create a bridge btwn containers:
+	docker network create <bridge-name>
+To show network:
+	docker network ls
+To add the container in the network:
+	docker network connect <bridge-name> <any container-id>
+To show the configuration and info:
+	docker network inspect <bridge-name>
+To disconnect the container:
+	docker network disconnect <bridge-name> <container-id>
+To restart the container(stopped container):
+	docker restart <container-id>
+To kill the container id:
+	docker kill <container-id>
+To create an image from an image:
+	sudo docker commit <container-id>
