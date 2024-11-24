@@ -1,0 +1,139 @@
+Steps:
+save html and server file in the same folder
+run node server.js
+in browser type localhost:2005
+
+//index.html
+<!DOCTYPE html>
+<html>
+<body>
+<button onclick="fetchAll()">Fetch all records</button>
+<div id="userlist"></div>
+
+<form>
+    <input type="text" id="addname" placeholder="name">
+    <button type="button" onclick="addUser()">ADD</button>
+</form>
+
+<form>
+    <input type="text" id="uid" placeholder="id">
+    <input type="text" id="uname" placeholder="name">
+    <button type="button" onclick="updateuser()">UPDATE</button>
+</form>
+
+<form>
+    <input type="text" id="did" placeholder="id">
+    <button type="button" onclick="deluser()">DELETE</button>
+</form>
+
+<script>
+function fetchAll() {
+    fetch('/sam')
+        .then(response => response.json())
+        .then(data => {
+            const ul = document.getElementById('userlist');
+            ul.innerHTML = '';  // Clear existing content
+            data.forEach(user => {
+                // Correct usage of template literals with backticks
+                ul.innerHTML += `<p>ID: ${user.id}, Name: ${user.name}</p>`;
+            });
+        });
+}
+
+function addUser() {
+    const name = document.getElementById("addname").value;
+    fetch('/sam', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert("User added");
+        fetchAll();
+    });
+}
+
+function updateuser() {
+    const id = document.getElementById("uid").value;
+    const name = document.getElementById("uname").value;
+
+    fetch(`/sam/${id}`, {  // Corrected string interpolation for URL
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert("Update successful");
+        fetchAll();
+    });
+}
+
+function deluser() {
+    const id = document.getElementById("did").value;
+    fetch(`/sam/${id}`, {  // Corrected string interpolation for URL
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => response.text())
+    .then(data => {
+        alert("Deleted");
+        fetchAll();
+    });
+}
+</script>
+</body>
+</html>
+
+Server.js:
+// Import necessary modules
+const express = require('express');
+const app = express();
+const bp = require('body-parser');
+
+// Middleware to handle JSON requests
+app.use(bp.json());
+app.use(express.static('public'));  // Serve static files from 'public' directory
+
+// Sample user data
+let sam = [ { id: 1, name: "Neha" }, { id: 2, name: "MB" } ];
+
+// Route to get all users
+app.get('/sam', (req, res) => {
+    res.send(sam);
+    console.log("Successfully fetched");
+});
+
+// Route to add a new user
+app.post('/sam', (req, res) => {
+    const newuser = { id: sam.length + 1, name: req.body.name };
+    sam.push(newuser);
+    res.json(sam);
+    console.log("Successfully added new user");
+});
+
+// Route to update an existing user
+app.put('/sam/:id', (req, res) => {
+    const up = sam.find(c => c.id == parseInt(req.params.id));
+    if (up) {
+        up.name = req.body.name;
+        res.json(sam);
+        console.log("Successfully updated");
+    } else {
+        res.status(404).send('User not found');
+    }
+});
+
+// Route to delete a user
+app.delete('/sam/:id', (req, res) => {
+    sam = sam.filter(c => c.id != parseInt(req.params.id));
+    res.send("Successfully deleted");
+    console.log("Successfully deleted");
+});
+
+// Start the server
+app.listen(2005, () => {
+    console.log("SERVER ON");
+});
+
