@@ -1,0 +1,210 @@
+Clusters -> Browse colections -> Create Database -> enter database name and collection name
+clusters -> overview -> connect -> drivers -> copy teh connection string
+paste the copied conn str in the code (mongouri)
+database access -> add new database user -> select password -> enter username and password -> click Add Built in Role -> select atlas admin -> click add user
+add this username and password in mongouri
+
+run:
+npm init -y
+npm install mongoose express cors body-parser
+node server.js
+run index.html
+
+Code:
+//index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student CRUD App</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+</head>
+<body ng-app="studentApp" ng-controller="studentCtrl">
+  <div>
+    <h2>Student Form</h2>
+    <form ng-submit="addStudent()" name="studentForm">
+      <input type="text" ng-model="student.name" placeholder="Name" required />
+      <input type="number" ng-model="student.age" placeholder="Age" required />
+      <input type="text" ng-model="student.grade" placeholder="Grade" required />
+      <button type="submit" ng-disabled="studentForm.$invalid">Add Student</button>
+    </form>
+  </div>
+
+  <div>
+    <h2>Students Table</h2>
+    <table border="1">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Age</th>
+          <th>Grade</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Apply orderBy filter to sort by name in ascending order -->
+        <tr ng-repeat="stu in students | orderBy:'name'">
+          <td><input ng-model="stu.name" /></td>
+          <td><input ng-model="stu.age" /></td>
+          <td><input ng-model="stu.grade" /></td>
+          <td>
+            <button ng-click="updateStudent(stu)">Update</button>
+            <button ng-click="deleteStudent(stu._id)">Delete</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    const app = angular.module('studentApp', []);
+
+    // Service to handle CRUD operations
+    app.service('StudentService', function ($http) {
+      const apiUrl = 'http://localhost:5000/api/students';
+
+      // Fetch all students
+      this.getStudents = function () {
+        return $http.get(apiUrl);
+      };
+
+      // Add new student
+      this.addStudent = function (student) {
+        return $http.post(apiUrl, student);
+      };
+
+      // Update existing student
+      this.updateStudent = function (id, student) {
+        return $http.put(`${apiUrl}/${id}`, student);
+      };
+
+      // Delete student by id
+      this.deleteStudent = function (id) {
+        return $http.delete(`${apiUrl}/${id}`);
+      };
+    });
+
+    // Controller to interact with the view
+    app.controller('studentCtrl', function ($scope, StudentService) {
+      $scope.students = [];
+      $scope.student = {};
+
+      // Fetch Students
+      const fetchStudents = () => {
+        StudentService.getStudents().then((res) => {
+          $scope.students = res.data;
+        });
+      };
+
+      fetchStudents();
+
+      // Add Student
+      $scope.addStudent = () => {
+        StudentService.addStudent($scope.student).then(() => {
+          $scope.student = {}; // Clear form after adding
+          fetchStudents();
+        });
+      };
+
+      // Update Student
+      $scope.updateStudent = (stu) => {
+        StudentService.updateStudent(stu._id, stu).then(() => {
+          fetchStudents();
+        });
+      };
+
+      // Delete Student
+      $scope.deleteStudent = (id) => {
+        StudentService.deleteStudent(id).then(() => {
+          fetchStudents();
+        });
+      };
+    });
+  </script>
+</body>
+</html>
+
+Server.js:
+const express = require('express');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(bodyParser.json());
+
+// MongoDB Atlas Connection
+const mongoUri = 'mongodb+srv://username:password@studentcluster.m5qvy.mongodb.net/YOUR DB?retryWrites=true&w=majority&appName=StudentCluster';
+
+mongoose
+  .connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log('MongoDB Atlas Connected'))
+  .catch(err => console.error('MongoDB connection error:', err));
+
+// Mongoose Schema and Model
+const studentSchema = new mongoose.Schema({
+  name: String,
+  age: Number,
+  grade: String,
+});
+
+const Student = mongoose.model('Student', studentSchema);
+
+// CRUD Routes
+
+// Create a new student
+app.post('/api/students', async (req, res) => {
+  try {
+    const newStudent = new Student(req.body);
+    await newStudent.save();
+    res.status(201).send(newStudent);
+  } catch (err) {
+    res.status(400).send({ error: 'Error creating student' });
+  }
+});
+
+// Retrieve all students
+app.get('/api/students', async (req, res) => {
+  try {
+    const students = await Student.find();
+    res.status(200).send(students);
+  } catch (err) {
+    res.status(500).send({ error: 'Error fetching students' });
+  }
+});
+
+// Update an existing student by ID
+app.put('/api/students/:id', async (req, res) => {
+  try {
+    const updatedStudent = await Student.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!updatedStudent) {
+      return res.status(404).send({ error: 'Student not found' });
+    }
+    res.status(200).send(updatedStudent);
+  } catch (err) {
+    res.status(400).send({ error: 'Error updating student' });
+  }
+});
+
+// Delete a student by ID
+app.delete('/api/students/:id', async (req, res) => {
+  try {
+    const deletedStudent = await Student.findByIdAndDelete(req.params.id);
+    if (!deletedStudent) {
+      return res.status(404).send({ error: 'Student not found' });
+    }
+    res.status(204).send();
+  } catch (err) {
+    res.status(500).send({ error: 'Error deleting student' });
+  }
+});
+
+// Start the server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
