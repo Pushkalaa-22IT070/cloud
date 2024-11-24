@@ -1,0 +1,125 @@
+sudo apt update
+sudo apt install mpich
+mpiexec --version
+
+
+nano c1.c
+code :
+#include <stdio.h>
+ #include <mpi.h>
+int main (int argc, char *argv[]) {
+ int rank, size;
+MPI_Init (&argc, &argv); //initialize MPI library 
+MPI_Comm_size(MPI_COMM_WORLD, &size); //get number of processes 
+MPI_Comm_rank (MPI_COMM_WORLD, &rank); //get my process id
+//do something
+printf ("Hello World from rank %d\n", rank);
+if (rank == 0) printf("MPI World size = %d processes\n", size);
+MPI_Finalize(); // MPI cleanup 
+return 0;
+}
+
+
+mpicc -o c1 c1.c
+mpirun -n 5 ./c1
+
+
+code 2 :
+#include <stdio.h>
+#include <stdlib.h>
+#include <mpi.h>
+int main(int argc, char *argv[]) {
+const int tag = 42; // Message tag
+int id, ntasks, source_id, dest_id, err, i;
+MPI_Status status;
+int msg[2]; // Message array
+// Initialize MPI
+err = MPI_Init(&argc, &argv);
+if (err != MPI_SUCCESS) {
+printf("MPI initialization failed!\n");
+exit(1);
+}
+// Get the number of tasks
+err = MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
+// Get the ID of this process
+err = MPI_Comm_rank(MPI_COMM_WORLD, &id);
+if (ntasks < 2) {
+printf("You have to use at least 2 processors to run this program\n");
+MPI_Finalize();
+exit(0);
+}
+if (id == 0) { // Process 0 (the receiver) does this
+for (i = 1; i < ntasks; i++) {
+// Receive a message
+err = MPI_Recv(msg, 2, MPI_INT, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &status);
+// Get the ID of the sender
+source_id = status.MPI_SOURCE;
+printf("Received message %d %d from process %d\n", msg[0], msg[1], source_id);
+}
+} else { // Processes 1 to N-1 (the senders) do this
+msg[0] = id;
+// Put own identifier in the message
+msg[1] = ntasks; // And total number of processes
+dest_id = 0;
+// Destination address
+// Send the message to process 0
+err = MPI_Send(msg, 2, MPI_INT, dest_id, tag, MPI_COMM_WORLD);
+}
+// Terminate MPI
+err = MPI_Finalize();
+if (id == 0) {
+printf("Ready\n");
+}
+exit(0);
+return 0;
+}
+
+
+code 3:
+#include <stdio.h>
+#include <mpi.h>
+#include <math.h>
+#include <stdlib.h>
+int main(int argc, char *argv[]) {
+int done = 0, n, myid, numprocs, i;
+double PI25DT = 3.141592653589793238462643;
+double mypi, pi, h, sum, x;
+MPI_Init(&argc, &argv);
+// Initialize the MPI environment
+MPI_Comm_size(MPI_COMM_WORLD, &numprocs); // Get the number of processes
+MPI_Comm_rank(MPI_COMM_WORLD, &myid); // Get the rank of the process
+while (!done) {
+if (myid == 0) {
+printf("Enter the number of intervals (0 quits): ");
+fflush(stdout); // Ensure prompt is displayed before user input
+scanf("%d", &n);
+if (n == 0) {
+done = 1;
+}
+}
+// Broadcast the value of n to all processes
+MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+// Exit if n is 0
+if (done) {
+break;
+}
+// Compute the integral
+h = 1.0 / (double)n;
+sum = 0.0;
+for (i = myid + 1; i <= n; i += numprocs) {
+x = h * ((double)i - 0.5);
+sum += 4.0 / (1.0 + x * x);
+}
+mypi = h * sum;
+// Reduce results from all processes to process 0
+MPI_Reduce(&mypi, &pi, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+// Print result from process 0
+if (myid == 0 && !done) {
+printf("pi is approximately %.16f, Error is %.16f\n", pi, fabs(pi - PI25DT));
+}
+}
+MPI_Finalize(); // Finalize the MPI environment
+return 0;
+}
+
+
