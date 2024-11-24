@@ -1,0 +1,450 @@
+https://www.dropbox.com/developers
+create app
+Scoped access
+full dropbox
+give app name
+give create app
+in permissions ->tick files.content.write and files.content.read
+give submit
+settings->in Generated access token -> give generate
+copy the token
+paste in the html code in access token 
+save and run the code(node server.js)
+web page will display upload the image and check as
+https://www.dropbox.com/home
+
+
+
+Code :
+//s.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Lending App</title>
+    <link rel="stylesheet" href="ss.css">
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/1.19/auth0-spa-js.production.js"></script>
+    <script src="https://unpkg.com/dropbox/dist/Dropbox-sdk.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const auth0 = await createAuth0Client({
+                domain: 'dev-7ay4oaf77wyobzhg.us.auth0.com',
+                client_id: 'YsmXAkDzOVV9dzaOmIl6pvhBMQR2SUYp',
+                redirect_uri: 'http://localhost:3000'
+            });
+
+            const dbx = new Dropbox.Dropbox({ accessToken: 'your access token' });
+
+            const updateUI = async () => {
+                try {
+                    const isAuthenticated = await auth0.isAuthenticated();
+                    document.getElementById('login-btn').style.display = isAuthenticated ? 'none' : 'block';
+                    document.getElementById('logout-btn').style.display = isAuthenticated ? 'block' : 'none';
+
+                    if (isAuthenticated) {
+                        const user = await auth0.getUser();
+                        document.getElementById('user-profile').textContent = `Welcome, ${user.name}`;
+                    } else {
+                        document.getElementById('user-profile').textContent = '';
+                    }
+                } catch (error) {
+                    console.error('Error updating UI:', error);
+                }
+            };
+
+            const login = async () => {
+                await auth0.loginWithRedirect();
+            };
+
+            const logout = () => {
+                auth0.logout({
+                    returnTo: window.location.origin
+                });
+            };
+
+            if (window.location.search.includes('code=') && window.location.search.includes('state=')) {
+                try {
+                    await auth0.handleRedirectCallback();
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                } catch (error) {
+                    console.error('Error handling redirect callback:', error);
+                }
+                updateUI();
+            } else {
+                updateUI();
+            }
+
+            document.getElementById('login-btn').addEventListener('click', login);
+            document.getElementById('logout-btn').addEventListener('click', logout);
+
+            document.getElementById('fileInput').addEventListener('change', async (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    try {
+                        const response = await dbx.filesUpload({
+                            path: '/BookImages/' + file.name,
+                            contents: file
+                        });
+                        console.log('File uploaded successfully:', response);
+                        alert('File uploaded successfully!');
+                    } catch (error) {
+                        console.error('Error uploading file:', error);
+                        alert('Error uploading file: ' + (error.error ? JSON.stringify(error.error) : error.message));
+                    }
+                }
+            });
+
+            document.getElementById('download-btn').addEventListener('click', async () => {
+                const fileNameInput = document.getElementById('uploaded-file-name');
+                const fileName = fileNameInput ? fileNameInput.value : '';
+
+                if (!fileName) {
+                    alert('No file selected for download.');
+                    return;
+                }
+
+                const filePath = '/BookImages/' + fileName; // Ensure the correct path with matching case
+                console.log('Attempting to download file from path:', filePath);
+
+                try {
+                    const response = await dbx.filesDownload({ path: filePath });
+                    console.log('Download response:', response);
+
+                    if (response && response.result && response.result.fileBlob) {
+                        const blob = new Blob([response.result.fileBlob], { type: response.result.mime_type || 'application/octet-stream' });
+                        const url = URL.createObjectURL(blob);
+
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = fileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        URL.revokeObjectURL(url); // Clean up
+                    } else {
+                        console.error('No fileBlob in response:', response);
+                        alert('Error downloading file: No file data received.');
+                    }
+                } catch (error) {
+                    console.error('Error downloading file:', error);
+                    alert('Error downloading file: ' + (error.error ? JSON.stringify(error.error) : error.message));
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+    <nav>
+        <div class="logo">
+            <img src="logo.png" alt="Logo">
+            <span class="name">Book Lending</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="#home">Home</a></li>
+        </ul>
+        <div class="burger">
+            <div class="line1"></div>
+            <div class="line2"></div>
+            <div class="line3"></div>
+        </div>
+        <button id="login-btn">Login</button>
+        <button id="logout-btn" style="display: none;">Logout</button>
+        <span id="user-profile"></span>
+    </nav>
+
+    <!-- File upload and download -->
+    <div>
+        <input type="file" id="fileInput">
+        <input type="text" id="uploaded-file-name" placeholder="Enter file name to download">
+        <button id="download-btn">Download File</button>
+    </div>
+
+    <script src="server.js"></script>
+</body>
+</html>
+
+
+
+//ss.css
+body {
+    margin: 0;
+    color: #6a6f8c;
+    background: #c8c8c8;
+    font: 600 16px/18px 'Open Sans', sans-serif;
+}
+*,
+:after,
+:before {
+    box-sizing: border-box;
+}
+.clearfix:after,
+.clearfix:before {
+    content: '';
+    display: table;
+}
+.clearfix:after {
+    clear: both;
+    display: block;
+}
+a {
+    color: inherit;
+    text-decoration: none;
+}
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background-color: #333;
+    color: #fff;
+}
+.logo {
+    display: flex;
+    align-items: center;
+}
+.logo img {
+    width: 40px;
+    height: 40px;
+    margin-right: 10px;
+}
+.nav-links {
+    display: flex;
+    list-style: none;
+}
+.nav-links li {
+    margin-left: 20px;
+}
+.nav-links a {
+    color: #fff;
+    text-decoration: none;
+}
+.burger {
+    display: none;
+    flex-direction: column;
+    cursor: pointer;
+}
+.burger div {
+    width: 25px;
+    height: 3px;
+    background-color: #fff;
+    margin: 5px;
+}
+.hero {
+    height: 100vh;
+    background: url('https://raw.githubusercontent.com/khadkamhn/day-01-login-form/master/img/bg.jpg') no-repeat center center/cover;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    text-align: center;
+}
+.hero-content {
+    font-color:powderblue;
+}
+.hero h2 {
+    font-size: 2.5em;
+    margin-bottom: 20px;
+}
+.hero p {
+    font-size: 1.2em;
+    margin-bottom: 30px;
+}
+.cta-btn {
+    padding: 10px 20px;
+    background-color: #1161ee;
+    color: #fff;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    text-decoration: none;
+}
+.portfolio,
+.about,
+.contact {
+    padding: 60px 20px;
+}
+.portfolio .grid-container,
+.about .timeline,
+.about .testimonials,
+.contact .contact-form,
+.contact .map,
+.contact .social-links {
+    margin-top: 20px;
+}
+.footer {
+    background-color: #333;
+    color: #fff;
+    padding: 20px;
+    text-align: center;
+}
+.footer .quick-links ul {
+    list-style: none;
+    padding: 0;
+}
+.footer .quick-links ul li {
+    display: inline;
+    margin: 0 10px;
+}
+.footer .quick-links a {
+    color: #fff;
+    text-decoration: none;
+}
+.footer .social-icons {
+    margin-top: 10px;
+}
+.footer .social-icons img {
+    width: 30px;
+    height: 30px;
+    margin: 0 5px;
+}
+@media (max-width: 768px) {
+    .nav-links {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        background-color: #333;
+        position: absolute;
+        top: 60px;
+        left: 0;
+    }
+    .nav-links li {
+        margin: 10px 0;
+    }
+    .burger {
+        display: flex;
+    }
+}
+.contact {
+    padding: 60px 20px;
+    background-color: #f9f9f9;
+    text-align: center;
+}
+
+.contact-form {
+    max-width: 600px;
+    margin: 0 auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.contact-form h2 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.form-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: #555;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.form-group textarea {
+    resize: vertical;
+}
+
+button[type="submit"] {
+    background-color: #1161ee;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+button[type="submit"]:hover {
+    background-color: #0d4cb5;
+}
+
+.map,
+.social-links {
+    margin-top: 20px;
+    /* Adjust margin as needed */
+}
+
+.about-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px;
+    background-color: #fff;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    text-align: justify;
+}
+
+.about-content h2 {
+    font-size: 2.5em;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.about-content p {
+    font-size: 1.1em;
+    line-height: 1.6;
+    margin-bottom: 15px;
+    color: #666;
+}
+#login-btn, #logout-btn {
+  background-color: #4CAF50;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  transition-duration: 0.4s;
+}
+
+#login-btn:hover, #logout-btn:hover {
+  background-color: white;
+  color: black;
+  border: 2px solid #4CAF50;
+}
+
+#user-profile {
+  margin-left: 20px;
+  font-size: 18px;
+  color: white;
+}
+
+
+
+
+
+//server.js
+const express = require('express');
+const path = require('path');
+const app = express();
+const PORT = 3000;
+
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 's.html'));
+});
+
+app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+});
+
